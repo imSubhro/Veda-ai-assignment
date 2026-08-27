@@ -12,7 +12,9 @@
 
 # testing
 /coverage
-
+/create-sample-pdfs.js
+/public/sample-answer-sheets
+/public/sample-question-papers
 # next.js
 /.next/
 /out/

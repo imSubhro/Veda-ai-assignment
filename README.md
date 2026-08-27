@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VedaAI - Assessment Extraction & Answer Mapping
+
+AI-powered tool for teachers to extract questions from exam papers, transcribe student answers, and automatically map answers to questions with confidence scoring.
+
+## Features
+
+- **Question Extraction** - Extracts all questions from uploaded question papers using Gemini AI
+- **Answer Transcription** - Reads and transcribes handwritten student answers from answer sheets
+- **Auto-Mapping** - Automatically matches answers to their corresponding questions
+- **Bounding Box Highlights** - Highlights matched answers on the answer sheet with color-coded confidence
+- **Confidence Scoring** - Shows match quality (0-100%) for each question-answer pair
+- **PDF & Image Support** - Accepts PDF, PNG, JPG, and other common document formats
+- **Responsive Design** - Works on desktop and mobile devices
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| UI Components | shadcn/ui |
+| AI Model | Google Gemini 3.5 Flash Lite |
+| PDF Processing | pdf.js |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd veda-ai
+
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env.local
+```
+
+### Configuration
+
+Add your Gemini API key to `.env.local`:
+
+```
+GEMINI_API_KEY=your_api_key_here
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Usage
 
-To learn more about Next.js, take a look at the following resources:
+1. **Upload Files** - Drag and drop or click to upload a question paper and student answer sheet
+2. **Start Processing** - Click "Start Mapping" to begin AI extraction
+3. **Review Results** - Click any question to see its matched answer highlighted on the answer sheet
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── process/     # AI processing endpoint
+│   │   ├── session/     # Session management
+│   │   └── upload/      # File upload handler
+│   ├── layout.tsx       # Root layout
+│   ├── page.tsx         # Main page
+│   └── globals.css      # Global styles
+├── components/
+│   ├── app-layout.tsx   # Main layout wrapper
+│   ├── header.tsx       # Navigation header
+│   ├── sidebar.tsx      # Desktop sidebar
+│   ├── mobile-drawer.tsx# Mobile navigation
+│   ├── upload-screen.tsx    # File upload UI
+│   ├── processing-screen.tsx# Processing animation
+│   └── review-screen.tsx    # Results review
+├── lib/
+│   ├── session-store.ts # In-memory session storage
+│   └── utils.ts         # Utility functions
+└── types/
+    └── index.ts         # TypeScript interfaces
+```
 
-## Deploy on Vercel
+## API Endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/upload` | Upload question paper and answer sheet |
+| POST | `/api/process` | Process uploaded files with AI |
+| GET | `/api/session/[id]` | Retrieve session data |
+| DELETE | `/api/session/[id]` | Delete session |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
