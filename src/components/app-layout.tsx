@@ -18,7 +18,7 @@ export function AppLayout({ children, showBack, onBack, headerTitle, showSidebar
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#e0e0e0] overflow-hidden p-2 lg:p-3 gap-2 lg:gap-3">
+    <div className="flex h-screen bg-[#e8e8e8] overflow-hidden p-2 lg:p-3 gap-2 lg:gap-3">
       {/* Sidebar - Desktop only */}
       {showSidebar && (
         <div className="hidden lg:block shrink-0">

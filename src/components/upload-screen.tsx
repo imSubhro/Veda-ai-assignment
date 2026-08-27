@@ -114,17 +114,17 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-6 lg:p-10">
-      <div className="w-full max-w-[700px] space-y-5 lg:space-y-6">
+      <div className="w-full max-w-[750px] space-y-5 lg:space-y-6">
         {/* Title */}
         <div className="space-y-1 text-center lg:text-left">
-          <h1 className="text-[28px] lg:text-[42px] font-bold text-gray-900 leading-tight">
+          <h1 className="text-[26px] sm:text-[32px] lg:text-[40px] font-bold text-gray-900 leading-tight whitespace-nowrap">
             Upload{" "}
             <span className="relative inline-block">
               <span className="relative z-10 text-[#ff5722]">Question Paper & Answer Sheets</span>
               <span className="absolute inset-0 bg-[#ff5722]/8 rounded-md" />
             </span>
           </h1>
-          <p className="text-[14px] lg:text-[15px] text-gray-500">Upload both files to get started</p>
+          <p className="text-[14px] lg:text-[15px] text-gray-500 text-center">Upload both files to get started</p>
         </div>
 
         {/* Model Image */}

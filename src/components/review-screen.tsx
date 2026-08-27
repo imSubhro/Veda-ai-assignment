@@ -299,17 +299,27 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
           >
             {session.answerSheetImages && session.answerSheetImages[currentPage] ? (
               <div className="relative">
-                <img
-                  ref={imageRef}
-                  src={session.answerSheetImages[currentPage]}
-                  alt={`Answer sheet page ${currentPage + 1}`}
-                  className="w-full h-auto"
-                  onLoad={drawHighlights}
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                />
+                {session.answerSheetImages[currentPage].startsWith("data:application/pdf") ? (
+                  <iframe
+                    src={session.answerSheetImages[currentPage]}
+                    className="w-full h-[800px] border-0"
+                    title={`Answer sheet page ${currentPage + 1}`}
+                  />
+                ) : (
+                  <>
+                    <img
+                      ref={imageRef}
+                      src={session.answerSheetImages[currentPage]}
+                      alt={`Answer sheet page ${currentPage + 1}`}
+                      className="w-full h-auto"
+                      onLoad={drawHighlights}
+                    />
+                    <canvas
+                      ref={canvasRef}
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                    />
+                  </>
+                )}
               </div>
             ) : (
               <div className="w-full h-96 flex items-center justify-center bg-gray-50">

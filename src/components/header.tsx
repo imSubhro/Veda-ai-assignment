@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, HelpCircle, Bell, Sparkles, Menu, FileText, ChevronDown } from "lucide-react";
+import Image from "next/image";
 
 interface HeaderProps {
   title?: string;
@@ -11,7 +12,7 @@ interface HeaderProps {
 
 export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between px-4 h-[56px] border-b border-gray-100">
+    <header className="flex items-center justify-between px-4 lg:px-6 h-[60px] border-b-[1.5px] border-gray-200 bg-white shrink-0">
       {/* Left */}
       <div className="flex items-center gap-3">
         {showBack && (
@@ -24,10 +25,8 @@ export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle 
         )}
         {/* Mobile: Logo */}
         <div className="flex items-center gap-2 lg:hidden">
-          <div className="w-8 h-8 bg-[#1a1a1a] rounded-[10px] flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/>
-            </svg>
+          <div className="w-8 h-8 bg-[#1a1a1a] rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden">
+            <Image src="/logo.png" alt="VedaAI" width={20} height={20} className="object-contain" />
           </div>
           <span className="font-bold text-[17px] text-gray-900">VedaAI</span>
         </div>

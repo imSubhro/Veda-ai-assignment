@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessions } from "@/lib/session-store";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 interface Question {
@@ -31,18 +30,8 @@ interface Mapping {
   matchMethod: "label" | "semantic" | "manual" | "none";
 }
 
-async function fileToGenerativePart(file: File) {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  return {
-    inlineData: {
-      mimeType: file.type,
-      data: buffer.toString("base64"),
-    },
-  };
-}
-
 async function extractQuestions(images: { data: string; mimeType: string }[]): Promise<Question[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
   const prompt = `You are an exam paper analyzer. Extract ALL questions from this question paper image(s).
 
@@ -77,17 +66,10 @@ Rules:
   const response = result.response;
   const text = response.text();
 
-  // Clean the response - remove markdown code blocks if present
   let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.slice(7);
-  }
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
+  if (cleaned.startsWith("```")) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
   try {
@@ -99,7 +81,7 @@ Rules:
 }
 
 async function extractAnswers(images: { data: string; mimeType: string }[]): Promise<AnswerBlock[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
   const prompt = `You are a handwriting analyzer. Extract ALL answer blocks from this student answer sheet image(s).
 
@@ -138,15 +120,9 @@ Rules:
   const text = response.text();
 
   let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.slice(7);
-  }
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
+  if (cleaned.startsWith("```")) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
   try {
@@ -157,11 +133,8 @@ Rules:
   }
 }
 
-async function mapAnswers(
-  questions: Question[],
-  answerBlocks: AnswerBlock[]
-): Promise<Mapping[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+async function mapAnswers(questions: Question[], answerBlocks: AnswerBlock[]): Promise<Mapping[]> {
+  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
   const questionsJson = JSON.stringify(questions.map((q) => ({ id: q.id, number: q.number, subPart: q.subPart, text: q.text })));
   const answersJson = JSON.stringify(answerBlocks.map((a) => ({ id: a.id, detectedLabel: a.detectedLabel, text: a.text })));
@@ -196,21 +169,13 @@ Rules:
   const text = response.text();
 
   let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.slice(7);
-  }
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
+  if (cleaned.startsWith("```")) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
   try {
     const mappings = JSON.parse(cleaned) as Mapping[];
-
-    // Add unanswered questions
     const mappedIds = new Set(mappings.map((m) => m.questionId));
     for (const q of questions) {
       if (!mappedIds.has(q.id)) {
@@ -222,7 +187,6 @@ Rules:
         });
       }
     }
-
     return mappings;
   } catch {
     console.error("Failed to parse mappings JSON:", cleaned);
@@ -250,54 +214,46 @@ export async function POST(request: NextRequest) {
 
     session.status = "processing";
 
-    // Convert files to base64 for Gemini
     const questionPaperImages = await Promise.all(
       session.questionPaperFiles.map(async (file) => {
         const buffer = Buffer.from(await file.arrayBuffer());
-        return {
-          data: buffer.toString("base64"),
-          mimeType: file.type,
-        };
+        return { data: buffer.toString("base64"), mimeType: file.type };
       })
     );
 
     const answerSheetImages = await Promise.all(
       session.answerSheetFiles.map(async (file) => {
         const buffer = Buffer.from(await file.arrayBuffer());
-        return {
-          data: buffer.toString("base64"),
-          mimeType: file.type,
-        };
+        return { data: buffer.toString("base64"), mimeType: file.type };
       })
     );
 
-    // Step 1: Extract questions
     console.log("Extracting questions...");
     const questions = await extractQuestions(questionPaperImages);
 
-    // Step 2: Extract answers
     console.log("Extracting answers...");
     const answerBlocks = await extractAnswers(answerSheetImages);
 
-    // Step 3: Map answers to questions
     console.log("Mapping answers...");
     const mappings = await mapAnswers(questions, answerBlocks);
 
-    // Find unmatched answers
     const matchedAnswerIds = new Set(mappings.flatMap((m) => m.answerBlockIds));
     const unmatchedAnswers = answerBlocks
       .filter((b) => !matchedAnswerIds.has(b.id))
-      .map((b) => ({
-        answerBlockId: b.id,
-        reason: "No matching question found",
-      }));
+      .map((b) => ({ answerBlockId: b.id, reason: "No matching question found" }));
 
-    // Create image URLs for the client
-    const questionPaperImageUrls = session.questionPaperFiles.map((file) =>
-      URL.createObjectURL(file)
+    // Send files as base64 data URLs for client-side rendering
+    const questionPaperImageUrls = await Promise.all(
+      session.questionPaperFiles.map(async (file) => {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        return `data:${file.type};base64,${buffer.toString("base64")}`;
+      })
     );
-    const answerSheetImageUrls = session.answerSheetFiles.map((file) =>
-      URL.createObjectURL(file)
+    const answerSheetImageUrls = await Promise.all(
+      session.answerSheetFiles.map(async (file) => {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        return `data:${file.type};base64,${buffer.toString("base64")}`;
+      })
     );
 
     session.status = "completed";
