@@ -1,33 +1,36 @@
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — no type declarations for the worker entry point
 import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "@napi-rs/canvas";
 
-// Wire the pdfjs worker in-process via MessageChannel so Vercel's bundler
-// can statically trace the import and include the worker file in the bundle.
-// Using workerPort bypasses the workerSrc / fake-worker path entirely.
-let _workerPort: MessagePort | null = null;
+// Statically importing WorkerMessageHandler above ensures Vercel's file tracer
+// includes pdf.worker.mjs in the deployment bundle.
+//
+// In Node.js there is no real Worker API, so pdfjs falls back to a "fake worker"
+// which does: await import(GlobalWorkerOptions.workerSrc)
+// We short-circuit this by overriding _setupFakeWorkerGlobal on PDFWorker to
+// return a promise that resolves to the already-loaded WorkerMessageHandler,
+// so the dynamic import() is never attempted.
+const { PDFWorker } = pdfjsLib as typeof pdfjsLib & {
+  PDFWorker: { _setupFakeWorkerGlobal: Promise<typeof WorkerMessageHandler> };
+};
 
-function ensureWorker(): void {
-  if (_workerPort) return;
+Object.defineProperty(PDFWorker, "_setupFakeWorkerGlobal", {
+  get() {
+    return Promise.resolve(WorkerMessageHandler);
+  },
+  configurable: true,
+  enumerable: true,
+});
 
-  const { port1, port2 } = new MessageChannel();
-
-  // WorkerMessageHandler.setup(port) starts the worker message loop on port1
-  WorkerMessageHandler.setup(port1 as unknown as Worker, port1);
-
-  // Give pdfjs the other end of the channel
-  _workerPort = port2;
-  pdfjsLib.GlobalWorkerOptions.workerPort = port2 as unknown as Worker;
-}
+// workerSrc must be a non-empty string to pass the getter guard in pdfjs,
+// even though we never actually import it (the override above prevents that).
+pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 export async function pdfFileToImages(
   file: File,
   maxDimension: number = 1200
 ): Promise<string[]> {
-  ensureWorker();
-
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
   const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
