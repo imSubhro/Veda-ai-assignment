@@ -6,6 +6,7 @@ import { UploadScreen } from "@/components/upload-screen";
 import { ProcessingScreen } from "@/components/processing-screen";
 import { ReviewScreen } from "@/components/review-screen";
 import { SessionData } from "@/types";
+import { filesToImages } from "@/lib/pdf-utils";
 
 type AppScreen = "upload" | "processing" | "review";
 
@@ -37,17 +38,22 @@ export default function Home() {
     setError(null);
 
     try {
-      // Single request: send files directly to /api/process
-      const formData = new FormData();
-      questionPaper.forEach((file) => formData.append("questionPaper", file));
-      answerSheet.forEach((file) => formData.append("answerSheet", file));
+      // Convert PDFs/images to base64 data URLs in the browser where pdfjs
+      // has a real canvas — this avoids any server-side PDF rendering entirely.
+      setProcessingStage("uploading");
+      setProgress(15);
+      const questionPaperImages = await filesToImages(questionPaper, 1200);
+
+      setProgress(25);
+      const answerSheetImages = await filesToImages(answerSheet, 1200);
 
       setProcessingStage("extracting_questions");
-      setProgress(30);
+      setProgress(35);
 
       const processResponse = await fetch("/api/process", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionPaperImages, answerSheetImages }),
       });
 
       if (!processResponse.ok) {

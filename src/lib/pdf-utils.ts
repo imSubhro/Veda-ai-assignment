@@ -1,7 +1,13 @@
-import * as pdfjsLib from "pdfjs-dist";
+// pdf-utils.ts is a browser-only module. pdfjs-dist is loaded lazily so that
+// Next.js static generation never tries to evaluate it in Node.js (where
+// DOMMatrix and other browser globals are undefined).
 
-// Set worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+async function getPdfjs() {
+  const pdfjsLib = await import("pdfjs-dist");
+  // Use the CDN worker so no bundler magic is needed
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  return pdfjsLib;
+}
 
 export interface PDFPageImage {
   pageNumber: number;
@@ -17,6 +23,7 @@ export async function pdfToImages(
   file: File,
   maxDimension: number = 2000
 ): Promise<PDFPageImage[]> {
+  const pdfjsLib = await getPdfjs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const pages: PDFPageImage[] = [];
