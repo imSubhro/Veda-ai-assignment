@@ -1,11 +1,10 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "@napi-rs/canvas";
 
-// In a server-side (Node.js) environment the PDF parser runs in-process —
-// there is no web worker. Setting workerSrc to an empty string disables the
-// browser-oriented worker lookup and avoids bundlers (Turbopack/webpack)
-// resolving the worker module path to a numeric ID, which crashes pathToFileURL.
-pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+// Disable the web worker entirely for server-side usage.
+// pdfjs-dist runs the parser in-process when workerSrc is not set and
+// disableWorker is passed to getDocument — no browser worker is needed.
+pdfjsLib.GlobalWorkerOptions.workerSrc = "ignore";
 
 export async function pdfFileToImages(
   file: File,
@@ -13,7 +12,7 @@ export async function pdfFileToImages(
 ): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
-  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: uint8Array, disableWorker: true } as Parameters<typeof pdfjsLib.getDocument>[0]).promise;
   const images: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
