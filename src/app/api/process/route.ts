@@ -79,7 +79,7 @@ async function extractQuestions(
   images: { data: string; mimeType: string }[]
 ): Promise<Question[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-3.5-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -137,7 +137,7 @@ async function extractAnswers(
   images: { data: string; mimeType: string }[]
 ): Promise<AnswerBlock[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-3.5-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -202,7 +202,7 @@ async function mapAnswers(
   answerBlocks: AnswerBlock[]
 ): Promise<Mapping[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-3.5-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
