@@ -110,13 +110,17 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
   const getScoreInfo = (question: Question) => {
     const mapping = mappings.find((m) => m.questionId === question.id);
     if (!mapping || mapping.answerBlockIds.length === 0) {
-      return { score: "0/2", color: "text-[#ff5722]", bg: "bg-[#ff5722]/10" };
+      return { score: "0/2", color: "text-[#ff5722]", bg: "bg-[#ff5722]/10", feedback: "Not answered." };
     }
-    const confidence = mapping.matchConfidence;
-    if (confidence >= 0.8) return { score: "2/2", color: "text-green-600", bg: "bg-green-50" };
-    if (confidence >= 0.5) return { score: "4/5", color: "text-green-600", bg: "bg-green-50" };
-    if (confidence >= 0.3) return { score: "3/5", color: "text-[#ff5722]", bg: "bg-[#ff5722]/10" };
-    return { score: "0/2", color: "text-[#ff5722]", bg: "bg-[#ff5722]/10" };
+    const marksAwarded = mapping.marksAwarded ?? (mapping.isCorrect ? 2 : 0);
+    const maxMarks = mapping.maxMarks ?? 2;
+    const isCorrect = mapping.isCorrect ?? mapping.matchConfidence >= 0.8;
+    return {
+      score: `${marksAwarded}/${maxMarks}`,
+      color: isCorrect ? "text-green-600" : "text-[#ff5722]",
+      bg: isCorrect ? "bg-green-50" : "bg-[#ff5722]/10",
+      feedback: mapping.feedback || (isCorrect ? "Answer appears correct." : "Review this answer carefully."),
+    };
   };
 
   const totalPages = session.answerSheetImages?.length || 1;
@@ -124,11 +128,11 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-56px)]">
       {/* Mobile Tab Bar - shown at top on mobile */}
-      <div className="flex lg:hidden px-4 py-3 bg-[#e0e0e0]">
-        <div className="flex w-full bg-white rounded-full p-1 border border-gray-200">
+      <div className="flex lg:hidden px-3 py-3 bg-[#e8e8e8]">
+        <div className="flex w-full h-[54px] bg-white rounded-full p-1 border border-gray-200 shadow-sm">
           <button
             className={cn(
-              "flex-1 py-2.5 text-[13px] font-semibold rounded-full transition-colors",
+              "flex-1 py-2.5 text-[14px] font-medium rounded-full transition-all",
               activeTab === "questions" ? "bg-gray-900 text-white" : "text-gray-500"
             )}
             onClick={() => setActiveTab("questions")}
@@ -137,7 +141,7 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
           </button>
           <button
             className={cn(
-              "flex-1 py-2.5 text-[13px] font-semibold rounded-full transition-colors",
+              "flex-1 py-2.5 text-[14px] font-medium rounded-full transition-all",
               activeTab === "answerSheet" ? "bg-gray-900 text-white" : "text-gray-500"
             )}
             onClick={() => setActiveTab("answerSheet")}
@@ -149,24 +153,24 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
 
       {/* Questions Panel */}
       <div className={cn(
-        "w-full lg:w-[440px] xl:w-[480px] flex flex-col bg-white lg:border-r border-gray-100",
+        "w-full lg:w-[672px] xl:w-[672px] flex flex-col bg-[#e8e8e8] lg:bg-white lg:border-r border-gray-100",
         activeTab === "answerSheet" && "hidden lg:flex"
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-          <h2 className="text-[14px] font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 lg:border-gray-100">
+          <h2 className="text-[14px] font-semibold text-gray-900 tracking-tight">
             Extracted Questions (from question paper)
           </h2>
           <button
             onClick={expandAll}
-            className="text-[13px] font-medium text-gray-500 hover:text-gray-700 underline underline-offset-2"
+            className="bg-white rounded-full px-5 py-3 text-[14px] font-medium text-gray-900 hover:bg-gray-50 transition-colors"
           >
             Expand All
           </button>
         </div>
 
         {/* Questions List */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5">
+        <div className="flex-1 overflow-y-auto px-[10px] py-3 space-y-3">
           {questions.map((question) => {
             const scoreInfo = getScoreInfo(question);
             const isExpanded = expandedQuestions.has(question.id);
@@ -176,21 +180,21 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
               <div
                 key={question.id}
                 className={cn(
-                  "rounded-xl transition-all",
+                  "rounded-[17px] transition-all",
                   isExpanded
-                    ? "border-l-[3px] border-l-[#ff5722] bg-[#fff8f5]"
+                    ? "bg-white lg:border-2 lg:border-[#ff7a2f]"
                     : isSelected
-                      ? "bg-gray-50"
-                      : "bg-white hover:bg-gray-50/50"
+                      ? "bg-white"
+                      : "bg-white hover:bg-gray-50"
                 )}
               >
                 {/* Question Row */}
                 <div
                   onClick={() => handleQuestionClick(question.id)}
-                  className="flex items-start gap-3 px-3 py-3 cursor-pointer"
+                  className="flex items-start gap-2.5 px-3 py-3 cursor-pointer"
                 >
                   {/* Number Circle */}
-                  <div className="w-7 h-7 bg-gray-900 text-white rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 mt-0.5">
+                  <div className="w-8 h-8 bg-[#626262] text-white rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 mt-0.5 shadow-[inset_0_0_0_2px_#8a8a8a,0_2px_4px_rgba(0,0,0,0.16)]">
                     {question.number}
                   </div>
 
@@ -210,7 +214,7 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
 
                   {/* Score + Arrow */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn("text-[13px] font-bold", scoreInfo.color)}>
+                    <span className={cn("text-[14px] font-bold px-3 py-1 rounded-full", scoreInfo.color, scoreInfo.bg)}>
                       {scoreInfo.score}
                     </span>
                     <button
@@ -232,10 +236,10 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
                 {/* AI Feedback - Expanded */}
                 {isExpanded && (
                   <div className="px-4 pb-3 pt-0">
-                    <div className="border border-gray-200 rounded-xl p-3.5 ml-0">
+                    <div className="bg-[#f4f4f4] rounded-[16px] p-3.5 ml-0">
                       <p className="text-[13px] font-bold text-gray-900 mb-1">AI Feedback</p>
                       <p className="text-[13px] text-gray-600 leading-relaxed">
-                        Excellent work! You correctly identified the chloroplast as the organelle responsible for photosynthesis. Keep it up!
+                        {scoreInfo.feedback}
                       </p>
                     </div>
                   </div>
@@ -253,6 +257,7 @@ export function ReviewScreen({ session, onBack: _onBack }: ReviewScreenProps) {
       )}>
         {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 mx-4 mt-4 bg-[#333] rounded-t-xl">
+          <h2 className="hidden lg:block text-[16px] font-semibold text-white">Answer Sheet</h2>
           <div className="flex items-center bg-[#444] rounded-lg">
             <button
               onClick={() => setZoom((z) => Math.max(50, z - 10))}

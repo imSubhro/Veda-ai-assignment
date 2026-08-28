@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessions } from "@/lib/session-store";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { fileToImageUrl } from "@/lib/server-pdf-utils";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -28,10 +29,55 @@ interface Mapping {
   answerBlockIds: string[];
   matchConfidence: number;
   matchMethod: "label" | "semantic" | "manual" | "none";
+  marksAwarded?: number;
+  maxMarks?: number;
+  isCorrect?: boolean;
+  feedback?: string;
+}
+
+function parseJson<T>(text: string, fallback: T): T {
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
+  if (start < 0 || end < start) return fallback;
+
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function clampBbox(bbox: unknown): [number, number, number, number] {
+  if (!Array.isArray(bbox) || bbox.length !== 4) return [0, 0, 1, 1];
+  const values = bbox.map((value) => Number(value));
+  if (values.some((value) => !Number.isFinite(value))) return [0, 0, 1, 1];
+  const x = Math.min(1, Math.max(0, values[0]));
+  const y = Math.min(1, Math.max(0, values[1]));
+  const width = Math.min(1 - x, Math.max(0.01, values[2]));
+  const height = Math.min(1 - y, Math.max(0.01, values[3]));
+  return [x, y, width, height];
+}
+
+async function filesToAnalysisImages(files: File[]) {
+  const images: { data: string; mimeType: string }[] = [];
+  for (const file of files) {
+    const pages = await fileToImageUrl(file);
+    for (const page of pages) {
+      const [header, data] = page.split(",");
+      images.push({
+        data,
+        mimeType: header.match(/^data:(.*?);base64/)?.[1] || "image/jpeg",
+      });
+    }
+  }
+  return images;
 }
 
 async function extractQuestions(images: { data: string; mimeType: string }[]): Promise<Question[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3.5-flash-lite",
+    generationConfig: { responseMimeType: "application/json" },
+  });
 
   const prompt = `You are an exam paper analyzer. Extract ALL questions from this question paper image(s).
 
@@ -48,8 +94,10 @@ Return ONLY a valid JSON array (no markdown, no explanation) with this exact str
 ]
 
 Rules:
-- Preserve original question numbering exactly as printed
+- Preserve original question numbering exactly as printed and keep page order
 - Sub-parts like 11(a), 11(b) should be separate entries with subPart field
+- Read the complete printed question, including options, marks, and sub-question text
+- Treat each supplied image as one page, in the exact order supplied (page is 1-based)
 - bbox should be normalized coordinates [x, y, width, height] in range 0-1 relative to page dimensions
 - If no bbox is visible, use approximate coordinates
 - Include ALL questions, don't skip any
@@ -72,16 +120,24 @@ Rules:
   if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    console.error("Failed to parse questions JSON:", cleaned);
-    return [];
-  }
+  const parsed = parseJson<Partial<Question>[]>(cleaned, []);
+  return parsed
+    .filter((question) => question.text && question.number)
+    .map((question, index) => ({
+      id: question.id || `q${index + 1}`,
+      number: String(question.number),
+      ...(question.subPart ? { subPart: String(question.subPart) } : {}),
+      text: String(question.text),
+      page: Math.max(1, Number(question.page) || 1),
+      bbox: clampBbox(question.bbox),
+    }));
 }
 
 async function extractAnswers(images: { data: string; mimeType: string }[]): Promise<AnswerBlock[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3.5-flash-lite",
+    generationConfig: { responseMimeType: "application/json" },
+  });
 
   const prompt = `You are a handwriting analyzer. Extract ALL answer blocks from this student answer sheet image(s).
 
@@ -102,6 +158,8 @@ Return ONLY a valid JSON array (no markdown, no explanation) with this exact str
 
 Rules:
 - Detect question labels like "Q1", "Q2", "1.", "2.", "a)", "b)" etc.
+- Use one answer block for one complete answer, including continuation pages
+- Do not merge unrelated answers just because they are on the same page
 - Transcribe the handwritten text as accurately as possible
 - bbox should be normalized coordinates [x, y, width, height] in range 0-1
 - If an answer spans multiple pages, include multiple page entries
@@ -125,21 +183,32 @@ Rules:
   if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    console.error("Failed to parse answers JSON:", cleaned);
-    return [];
-  }
+  const parsed = parseJson<Partial<AnswerBlock>[]>(cleaned, []);
+  return parsed
+    .filter((answer) => answer.text)
+    .map((answer, index) => ({
+      id: answer.id || `a${index + 1}`,
+      ...(answer.detectedLabel ? { detectedLabel: String(answer.detectedLabel) } : {}),
+      text: String(answer.text),
+      pages: Array.isArray(answer.pages)
+        ? answer.pages.map((page) => ({
+          page: Math.max(0, Number(page.page) || 0),
+          bbox: clampBbox(page.bbox),
+        }))
+        : [],
+    }));
 }
 
 async function mapAnswers(questions: Question[], answerBlocks: AnswerBlock[]): Promise<Mapping[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3.5-flash-lite",
+    generationConfig: { responseMimeType: "application/json" },
+  });
 
   const questionsJson = JSON.stringify(questions.map((q) => ({ id: q.id, number: q.number, subPart: q.subPart, text: q.text })));
   const answersJson = JSON.stringify(answerBlocks.map((a) => ({ id: a.id, detectedLabel: a.detectedLabel, text: a.text })));
 
-  const prompt = `You are an answer-to-question mapper. Match each answer to the correct question.
+  const prompt = `You are an answer-to-question mapper and careful exam evaluator. Match each answer to the correct question, then evaluate whether the answer is correct based only on the question and the student's transcribed answer.
 
 Questions: ${questionsJson}
 
@@ -151,7 +220,11 @@ Return ONLY a valid JSON array (no markdown, no explanation) with this exact str
     "questionId": "q1",
     "answerBlockIds": ["a1"],
     "matchConfidence": 0.95,
-    "matchMethod": "label"
+    "matchMethod": "label",
+    "marksAwarded": 2,
+    "maxMarks": 2,
+    "isCorrect": true,
+    "feedback": "Correct: the answer identifies ..."
   }
 ]
 
@@ -162,6 +235,10 @@ Rules:
 - Answer blocks with no matching question should NOT be included
 - matchConfidence: 0.0 to 1.0
 - matchMethod: "label" | "semantic" | "none"
+- Evaluate only matched answers. Set isCorrect false when the answer is wrong, incomplete, or contradicts the question.
+- Set marksAwarded and maxMarks using marks stated in the question when visible; otherwise use maxMarks 2.
+- Feedback must be specific to this question and answer. Explain the error briefly and state what a correct answer should include. Never use generic feedback.
+- For unanswered questions use marksAwarded 0, isCorrect false, and feedback "Not answered."
 - Return ONLY the JSON array, nothing else`;
 
   const result = await model.generateContent(prompt);
@@ -175,7 +252,7 @@ Rules:
   cleaned = cleaned.trim();
 
   try {
-    const mappings = JSON.parse(cleaned) as Mapping[];
+    const mappings = parseJson<Mapping[]>(cleaned, []);
     const mappedIds = new Set(mappings.map((m) => m.questionId));
     for (const q of questions) {
       if (!mappedIds.has(q.id)) {
@@ -184,6 +261,10 @@ Rules:
           answerBlockIds: [],
           matchConfidence: 0,
           matchMethod: "none",
+          marksAwarded: 0,
+          maxMarks: 2,
+          isCorrect: false,
+          feedback: "Not answered.",
         });
       }
     }
@@ -195,11 +276,16 @@ Rules:
       answerBlockIds: [],
       matchConfidence: 0,
       matchMethod: "none" as const,
+      marksAwarded: 0,
+      maxMarks: 2,
+      isCorrect: false,
+      feedback: "Not answered.",
     }));
   }
 }
 
 export async function POST(request: NextRequest) {
+  let stage = "request validation";
   try {
     const { sessionId } = await request.json();
 
@@ -214,26 +300,27 @@ export async function POST(request: NextRequest) {
 
     session.status = "processing";
 
-    const questionPaperImages = await Promise.all(
-      session.questionPaperFiles.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        return { data: buffer.toString("base64"), mimeType: file.type };
-      })
-    );
+    if (!process.env.GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-    const answerSheetImages = await Promise.all(
-      session.answerSheetFiles.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        return { data: buffer.toString("base64"), mimeType: file.type };
-      })
-    );
+    stage = "converting question paper pages";
+    const questionPaperImages = await filesToAnalysisImages(session.questionPaperFiles);
+    stage = "converting answer sheet pages";
+    const answerSheetImages = await filesToAnalysisImages(session.answerSheetFiles);
 
+    stage = "extracting questions";
     console.log("Extracting questions...");
     const questions = await extractQuestions(questionPaperImages);
 
+    stage = "extracting answers";
     console.log("Extracting answers...");
     const answerBlocks = await extractAnswers(answerSheetImages);
 
+    stage = "mapping and evaluating answers";
     console.log("Mapping answers...");
     const mappings = await mapAnswers(questions, answerBlocks);
 
@@ -243,18 +330,8 @@ export async function POST(request: NextRequest) {
       .map((b) => ({ answerBlockId: b.id, reason: "No matching question found" }));
 
     // Send files as base64 data URLs for client-side rendering
-    const questionPaperImageUrls = await Promise.all(
-      session.questionPaperFiles.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        return `data:${file.type};base64,${buffer.toString("base64")}`;
-      })
-    );
-    const answerSheetImageUrls = await Promise.all(
-      session.answerSheetFiles.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        return `data:${file.type};base64,${buffer.toString("base64")}`;
-      })
-    );
+    const questionPaperImageUrls = questionPaperImages.map((image) => `data:${image.mimeType};base64,${image.data}`);
+    const answerSheetImageUrls = answerSheetImages.map((image) => `data:${image.mimeType};base64,${image.data}`);
 
     session.status = "completed";
 
@@ -270,9 +347,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Processing error:", error);
-    return NextResponse.json(
-      { error: `Failed to process documents: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: `Failed during ${stage}: ${message}` }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

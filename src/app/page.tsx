@@ -9,16 +9,32 @@ import { SessionData } from "@/types";
 
 type AppScreen = "upload" | "processing" | "review";
 
+async function readApiError(response: Response, fallback: string): Promise<Error> {
+  const body = await response.text();
+  if (!body) {
+    return new Error(`${fallback} (HTTP ${response.status})`);
+  }
+
+  try {
+    const parsed = JSON.parse(body) as { error?: string };
+    return new Error(parsed.error || `${fallback} (HTTP ${response.status})`);
+  } catch {
+    return new Error(`${fallback} (HTTP ${response.status}): ${body.slice(0, 160)}`);
+  }
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<AppScreen>("upload");
   const [session, setSession] = useState<SessionData | null>(null);
   const [processingStage, setProcessingStage] = useState("uploading");
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFilesReady = useCallback(async (questionPaper: File[], answerSheet: File[]) => {
     setScreen("processing");
     setProcessingStage("uploading");
     setProgress(10);
+    setError(null);
 
     try {
       // Step 1: Upload files
@@ -32,8 +48,7 @@ export default function Home() {
       });
 
       if (!uploadResponse.ok) {
-        const uploadError = await uploadResponse.json();
-        throw new Error(uploadError.error || "Failed to upload files");
+        throw await readApiError(uploadResponse, "Failed to upload files");
       }
 
       const { sessionId } = await uploadResponse.json();
@@ -48,8 +63,7 @@ export default function Home() {
       });
 
       if (!processResponse.ok) {
-        const processError = await processResponse.json();
-        throw new Error(processError.error || "Failed to process documents");
+        throw await readApiError(processResponse, "Failed to process documents");
       }
 
       setProcessingStage("completed");
@@ -61,7 +75,9 @@ export default function Home() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       setScreen("review");
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to connect to the processing server.";
       console.error("Processing failed:", err);
+      setError(message === "Failed to fetch" ? "Unable to connect to the server. Start the Next.js development server and try again." : message);
       setScreen("upload");
     }
   }, []);
@@ -70,16 +86,20 @@ export default function Home() {
     setScreen("upload");
     setSession(null);
     setProgress(0);
+    setError(null);
   }, []);
 
   return (
     <AppLayout
-      showBack={screen === "review"}
+      key={screen}
+      showBack
+      hideBackOnMobile={screen === "processing"}
       onBack={handleBack}
-      showSidebar={screen !== "processing"}
+      showSidebar
+      defaultSidebarCollapsed={screen !== "upload"}
     >
       {screen === "upload" && (
-        <UploadScreen onFilesReady={handleFilesReady} />
+        <UploadScreen onFilesReady={handleFilesReady} error={error} />
       )}
       {screen === "processing" && (
         <ProcessingScreen currentStage={processingStage} progress={progress} />

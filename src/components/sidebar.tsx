@@ -25,16 +25,16 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "h-full bg-white rounded-[20px] lg:rounded-[24px] flex flex-col transition-all duration-300 relative",
-        collapsed ? "w-[72px]" : "w-[240px]"
+        collapsed ? "w-[64px]" : "w-[304px]"
       )}
     >
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between p-4 pb-2">
         <div className="flex items-center gap-2.5">
-                      <Image src="/logo.png" alt="VedaAI" width={30} height={30} className="object-contain" />
+          <Image src="/logo.png" alt="VedaAI" width={40} height={40} className="object-contain" />
 
           {!collapsed && (
-            <span className="text-[18px] font-bold tracking-tight text-gray-900">VedaAI</span>
+            <span className="text-[26px] font-bold tracking-tight text-gray-900">VedaAI</span>
           )}
         </div>
         {!collapsed && (
@@ -43,8 +43,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             className="text-gray-400 hover:text-gray-600 transition-colors p-1"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <line x1="9" y1="3" x2="9" y2="21"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
             </svg>
           </button>
         )}
@@ -55,9 +55,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         <button
           className={cn(
             "w-full flex items-center gap-2 px-4 py-2.5 rounded-full",
-            "bg-[#1a1a1a] text-white font-medium text-[13px] border-2 border-[#ff5722]",
+            "bg-[#1a1a1a] text-white font-medium text-[16px] border-2 border-[#ff5722]",
             "hover:bg-[#2a2a2a] transition-all",
-            collapsed && "justify-center px-2 w-[44px] h-[44px]"
+            collapsed && "justify-center px-2 w-[50px] h-[50px]"
           )}
         >
           <Sparkles size={14} className={cn(!collapsed && "text-white")} />
@@ -71,14 +71,14 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <button
             key={item.label}
             className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors",
+              "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[18px] font-medium transition-colors",
               item.active
                 ? "bg-gray-100 text-gray-900"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50",
               collapsed && "justify-center px-2"
             )}
           >
-            <item.icon size={18} strokeWidth={1.8} />
+            <item.icon size={24} strokeWidth={1.8} />
             {!collapsed && <span>{item.label}</span>}
           </button>
         ))}
@@ -88,7 +88,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       <div className="px-3 py-2">
         <button
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[14px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[18px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors",
             collapsed && "justify-center px-2"
           )}
         >
@@ -105,10 +105,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         )}>
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-green-50 border border-green-200">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-green-600">
-              <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-              <path d="M12 22V12" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M22 7L12 12L2 7" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M17 9.5L7 4.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M12 22V12" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M22 7L12 12L2 7" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M17 9.5L7 4.5" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </div>
           {!collapsed && (

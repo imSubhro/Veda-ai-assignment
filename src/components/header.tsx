@@ -8,24 +8,25 @@ interface HeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   onMenuToggle?: () => void;
+  hideBackOnMobile?: boolean;
 }
 
-export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle }: HeaderProps) {
+export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle, hideBackOnMobile = false }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between px-4 lg:px-6 h-[60px] border-b-[1.5px] border-gray-200 bg-white shrink-0">
+    <header className="mx-[10px] mt-[10px] flex items-center justify-between px-3 h-[56px] rounded-[16px] border border-white bg-white shrink-0 lg:mx-0 lg:mt-0 lg:rounded-none lg:border-0 lg:border-b-[1.5px] lg:px-6 lg:h-[60px]">
       {/* Left */}
       <div className="flex items-center gap-3">
         {showBack && (
           <button
             onClick={onBack}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            className={`p-1 hover:bg-gray-100 rounded-lg transition-colors ${hideBackOnMobile ? "hidden lg:block" : ""}`}
           >
             <ArrowLeft size={20} className="text-gray-700" />
           </button>
         )}
         {/* Mobile: Logo */}
         <div className="flex items-center gap-2 lg:hidden">
-                      <Image src="/logo.png" alt="VedaAI" width={30} height={30} className="object-contain" />
+          <Image src="/logo.png" alt="VedaAI" width={30} height={30} className="object-contain" />
 
           <span className="font-bold text-[17px] text-gray-900">VedaAI</span>
         </div>
@@ -61,7 +62,7 @@ export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle 
         <div className="flex lg:hidden items-center gap-1.5">
           <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
           </div>
           <button

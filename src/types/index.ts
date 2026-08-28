@@ -22,6 +22,10 @@ export interface Mapping {
   answerBlockIds: string[];
   matchConfidence: number;
   matchMethod: "label" | "semantic" | "manual" | "none";
+  marksAwarded?: number;
+  maxMarks?: number;
+  isCorrect?: boolean;
+  feedback?: string;
 }
 
 export interface UnmatchedAnswer {

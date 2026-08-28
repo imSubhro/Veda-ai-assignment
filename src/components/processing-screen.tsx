@@ -9,9 +9,9 @@ interface ProcessingScreenProps {
 
 export function ProcessingScreen({ currentStage: _currentStage, progress: _progress }: ProcessingScreenProps) {
   return (
-    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-6">
-      <div className="w-full max-w-[400px]">
-        <div className="bg-white rounded-[20px] p-12 lg:p-16 text-center">
+    <div className="min-h-full flex items-center justify-center p-[10px] pt-3 sm:p-6 lg:p-3">
+      <div className="w-full max-w-[400px] h-[calc(100vh-90px)] max-h-[642px] lg:max-w-none lg:h-full lg:max-h-none">
+        <div className="h-full bg-white rounded-[22px] p-10 lg:p-16 lg:rounded-[24px] text-center flex flex-col items-center justify-center">
           {/* Sparkle Image */}
           <div className="flex justify-center mb-10">
             <div className="relative w-[140px] h-[140px]">

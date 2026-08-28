@@ -1,8 +1,11 @@
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "canvas";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-// Disable worker for server-side
-pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(
+  join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build", "pdf.worker.mjs")
+).href;
 
 export async function pdfFileToImages(
   file: File,
@@ -28,11 +31,13 @@ export async function pdfFileToImages(
 
     const ctx = canvas.getContext("2d");
 
-    await page.render({
+    const renderContext = {
       canvasContext: ctx as unknown as CanvasRenderingContext2D,
       viewport: scaledViewport,
       canvas: canvas as unknown as HTMLCanvasElement,
-    } as any).promise;
+    } as unknown as Parameters<typeof page.render>[0];
+
+    await page.render(renderContext).promise;
 
     images.push(canvas.toDataURL("image/jpeg", 0.85));
   }

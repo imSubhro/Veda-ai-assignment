@@ -28,7 +28,7 @@ function UploadZone({ titleHighlight, onDrop, files, onRemove }: UploadZoneProps
     <div
       {...getRootProps()}
       className={cn(
-        "border border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200",
+        "border border-dashed border-gray-300 rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-200",
         "hover:border-[#ff5722]/50 hover:bg-[#ff5722]/5",
         isDragActive && "border-[#ff5722] bg-[#ff5722]/5",
         files.length > 0 && "bg-gray-50/50"
@@ -36,12 +36,12 @@ function UploadZone({ titleHighlight, onDrop, files, onRemove }: UploadZoneProps
     >
       <input {...getInputProps()} />
       {files.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 py-2 sm:py-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-lg sm:rounded-xl flex items-center justify-center">
             <Upload className="w-5 h-5 text-gray-400" strokeWidth={2} />
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-gray-900">
+            <p className="text-[14px] sm:text-[15px] font-semibold text-gray-900">
               Upload <span className="text-[#ff5722]">{titleHighlight}</span>
             </p>
             <p className="text-[13px] text-gray-400 mt-0.5">Max 10MB</p>
@@ -82,9 +82,10 @@ function UploadZone({ titleHighlight, onDrop, files, onRemove }: UploadZoneProps
 
 interface UploadScreenProps {
   onFilesReady: (questionPaper: File[], answerSheet: File[]) => void;
+  error?: string | null;
 }
 
-export function UploadScreen({ onFilesReady }: UploadScreenProps) {
+export function UploadScreen({ onFilesReady, error }: UploadScreenProps) {
   const [questionPaperFiles, setQuestionPaperFiles] = useState<File[]>([]);
   const [answerSheetFiles, setAnswerSheetFiles] = useState<File[]>([]);
 
@@ -113,11 +114,11 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
   const isReady = questionPaperFiles.length > 0 && answerSheetFiles.length > 0;
 
   return (
-    <div className="min-h-[calc(100vh-60px)] flex items-center justify-center p-5 lg:p-10">
-      <div className="w-full max-w-[700px] space-y-5 lg:space-y-6">
+    <div className="min-h-full flex items-center justify-center p-[10px] pt-7 sm:p-5 lg:p-10">
+      <div className="w-full max-w-[700px] lg:max-w-[800px] space-y-5 lg:space-y-6">
         {/* Title */}
         <div className="space-y-1 text-center">
-          <h1 className="text-[26px] sm:text-[32px] lg:text-[40px] font-bold text-gray-900 leading-tight">
+          <h1 className="text-[23px] sm:text-[32px] lg:text-[40px] font-bold text-gray-900 leading-[1.18]">
             Upload{" "}
             <span className="relative inline-block">
               <span className="relative z-10 text-[#ff5722]">Question Paper & Answer Sheets</span>
@@ -142,7 +143,7 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
         </div>
 
         {/* Upload Zones Container */}
-        <div className="border border-dashed border-gray-300 rounded-2xl p-3">
+        <div className="border border-dashed border-gray-300 rounded-[24px] p-3 bg-white/50 lg:p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <UploadZone
               titleHighlight="Question Paper"
@@ -161,10 +162,15 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
 
         {/* Start Button */}
         <div className="flex flex-col items-center gap-3 pt-1">
+          {error && (
+            <div className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-[13px] leading-relaxed text-red-700">
+              {error}
+            </div>
+          )}
           <Button
             size="lg"
             className={cn(
-              "px-8 h-12 text-[15px] font-semibold rounded-full transition-all",
+              "px-6 h-11 text-[14px] font-semibold rounded-full transition-all",
               isReady
                 ? "bg-gray-900 hover:bg-gray-800 text-white"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -175,7 +181,7 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
             Start Mapping
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
-          <p className="text-[13px] text-gray-400 text-center">
+          <p className="max-w-[290px] text-[13px] text-gray-500 text-center leading-relaxed">
             Once both files are uploaded, you&apos;ll able to map answers with questions
           </p>
         </div>
