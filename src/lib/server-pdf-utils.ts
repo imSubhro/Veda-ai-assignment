@@ -1,23 +1,36 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — no type declarations for the worker entry point
+import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { createCanvas } from "@napi-rs/canvas";
 
-// In Node.js there is no real Worker API, so pdfjs falls back to a "fake
-// worker" by doing:  await import(GlobalWorkerOptions.workerSrc)
-// The value must therefore be a resolvable module specifier (not a file URL,
-// not an empty string, not a random word).  Pointing it at the worker entry
-// that ships inside pdfjs-dist lets Node.js resolve it from node_modules.
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "pdfjs-dist/legacy/build/pdf.worker.mjs";
+// Wire the pdfjs worker in-process via MessageChannel so Vercel's bundler
+// can statically trace the import and include the worker file in the bundle.
+// Using workerPort bypasses the workerSrc / fake-worker path entirely.
+let _workerPort: MessagePort | null = null;
+
+function ensureWorker(): void {
+  if (_workerPort) return;
+
+  const { port1, port2 } = new MessageChannel();
+
+  // WorkerMessageHandler.setup(port) starts the worker message loop on port1
+  WorkerMessageHandler.setup(port1 as unknown as Worker, port1);
+
+  // Give pdfjs the other end of the channel
+  _workerPort = port2;
+  pdfjsLib.GlobalWorkerOptions.workerPort = port2 as unknown as Worker;
+}
 
 export async function pdfFileToImages(
   file: File,
   maxDimension: number = 1200
 ): Promise<string[]> {
+  ensureWorker();
+
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
-  const pdf = await pdfjsLib
-    .getDocument({ data: uint8Array })
-    .promise;
+  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
   const images: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -46,7 +59,6 @@ export async function pdfFileToImages(
 
     await page.render(renderContext).promise;
 
-    // @napi-rs/canvas — encode to JPEG and return as base64 data URL
     const buffer = await canvas.encode("jpeg", 85);
     images.push(`data:image/jpeg;base64,${buffer.toString("base64")}`);
   }
@@ -58,7 +70,6 @@ export async function fileToImageUrl(file: File): Promise<string[]> {
   if (file.type === "application/pdf") {
     return pdfFileToImages(file);
   }
-  // Image files — return as base64 data URL
   const buffer = Buffer.from(await file.arrayBuffer());
   return [`data:${file.type};base64,${buffer.toString("base64")}`];
 }
