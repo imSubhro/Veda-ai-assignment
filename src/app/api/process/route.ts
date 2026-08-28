@@ -3,6 +3,9 @@ import { sessions } from "@/lib/session-store";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fileToImageUrl } from "@/lib/server-pdf-utils";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 interface Question {

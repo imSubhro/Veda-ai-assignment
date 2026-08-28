@@ -1,10 +1,11 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "canvas";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
+const require = createRequire(import.meta.url);
 pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(
-  join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build", "pdf.worker.mjs")
+  require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")
 ).href;
 
 export async function pdfFileToImages(
