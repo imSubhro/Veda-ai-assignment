@@ -1,5 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-import { createCanvas } from "canvas";
+import { createCanvas } from "@napi-rs/canvas";
 
 // In a server-side (Node.js) environment the PDF parser runs in-process —
 // there is no web worker. Setting workerSrc to an empty string disables the
@@ -27,7 +27,10 @@ export async function pdfFileToImages(
     );
 
     const scaledViewport = page.getViewport({ scale });
-    const canvas = createCanvas(scaledViewport.width, scaledViewport.height);
+    const canvas = createCanvas(
+      Math.round(scaledViewport.width),
+      Math.round(scaledViewport.height)
+    );
 
     const ctx = canvas.getContext("2d");
 
@@ -39,7 +42,9 @@ export async function pdfFileToImages(
 
     await page.render(renderContext).promise;
 
-    images.push(canvas.toDataURL("image/jpeg", 0.85));
+    // @napi-rs/canvas returns a Buffer from toBuffer(); convert to base64 data URL
+    const buffer = await canvas.encode("jpeg", 85);
+    images.push(`data:image/jpeg;base64,${buffer.toString("base64")}`);
   }
 
   return images;
@@ -49,7 +54,7 @@ export async function fileToImageUrl(file: File): Promise<string[]> {
   if (file.type === "application/pdf") {
     return pdfFileToImages(file);
   }
-  // Image files - return as base64 data URL
+  // Image files — return as base64 data URL
   const buffer = Buffer.from(await file.arrayBuffer());
   return [`data:${file.type};base64,${buffer.toString("base64")}`];
 }

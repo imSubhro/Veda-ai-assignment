@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessions } from "@/lib/session-store";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fileToImageUrl } from "@/lib/server-pdf-utils";
 
@@ -76,9 +75,11 @@ async function filesToAnalysisImages(files: File[]) {
   return images;
 }
 
-async function extractQuestions(images: { data: string; mimeType: string }[]): Promise<Question[]> {
+async function extractQuestions(
+  images: { data: string; mimeType: string }[]
+): Promise<Question[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3.5-flash-lite",
+    model: "gemini-2.0-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -107,15 +108,11 @@ Rules:
 - Return ONLY the JSON array, nothing else`;
 
   const imageParts = images.map((img) => ({
-    inlineData: {
-      mimeType: img.mimeType,
-      data: img.data,
-    },
+    inlineData: { mimeType: img.mimeType, data: img.data },
   }));
 
   const result = await model.generateContent([prompt, ...imageParts]);
-  const response = result.response;
-  const text = response.text();
+  const text = result.response.text();
 
   let cleaned = text.trim();
   if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
@@ -125,20 +122,22 @@ Rules:
 
   const parsed = parseJson<Partial<Question>[]>(cleaned, []);
   return parsed
-    .filter((question) => question.text && question.number)
-    .map((question, index) => ({
-      id: question.id || `q${index + 1}`,
-      number: String(question.number),
-      ...(question.subPart ? { subPart: String(question.subPart) } : {}),
-      text: String(question.text),
-      page: Math.max(1, Number(question.page) || 1),
-      bbox: clampBbox(question.bbox),
+    .filter((q) => q.text && q.number)
+    .map((q, index) => ({
+      id: q.id || `q${index + 1}`,
+      number: String(q.number),
+      ...(q.subPart ? { subPart: String(q.subPart) } : {}),
+      text: String(q.text),
+      page: Math.max(1, Number(q.page) || 1),
+      bbox: clampBbox(q.bbox),
     }));
 }
 
-async function extractAnswers(images: { data: string; mimeType: string }[]): Promise<AnswerBlock[]> {
+async function extractAnswers(
+  images: { data: string; mimeType: string }[]
+): Promise<AnswerBlock[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3.5-flash-lite",
+    model: "gemini-2.0-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -170,15 +169,11 @@ Rules:
 - Return ONLY the JSON array, nothing else`;
 
   const imageParts = images.map((img) => ({
-    inlineData: {
-      mimeType: img.mimeType,
-      data: img.data,
-    },
+    inlineData: { mimeType: img.mimeType, data: img.data },
   }));
 
   const result = await model.generateContent([prompt, ...imageParts]);
-  const response = result.response;
-  const text = response.text();
+  const text = result.response.text();
 
   let cleaned = text.trim();
   if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
@@ -188,28 +183,44 @@ Rules:
 
   const parsed = parseJson<Partial<AnswerBlock>[]>(cleaned, []);
   return parsed
-    .filter((answer) => answer.text)
-    .map((answer, index) => ({
-      id: answer.id || `a${index + 1}`,
-      ...(answer.detectedLabel ? { detectedLabel: String(answer.detectedLabel) } : {}),
-      text: String(answer.text),
-      pages: Array.isArray(answer.pages)
-        ? answer.pages.map((page) => ({
-          page: Math.max(0, Number(page.page) || 0),
-          bbox: clampBbox(page.bbox),
-        }))
+    .filter((a) => a.text)
+    .map((a, index) => ({
+      id: a.id || `a${index + 1}`,
+      ...(a.detectedLabel ? { detectedLabel: String(a.detectedLabel) } : {}),
+      text: String(a.text),
+      pages: Array.isArray(a.pages)
+        ? a.pages.map((p) => ({
+            page: Math.max(0, Number(p.page) || 0),
+            bbox: clampBbox(p.bbox),
+          }))
         : [],
     }));
 }
 
-async function mapAnswers(questions: Question[], answerBlocks: AnswerBlock[]): Promise<Mapping[]> {
+async function mapAnswers(
+  questions: Question[],
+  answerBlocks: AnswerBlock[]
+): Promise<Mapping[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3.5-flash-lite",
+    model: "gemini-2.0-flash-lite",
     generationConfig: { responseMimeType: "application/json" },
   });
 
-  const questionsJson = JSON.stringify(questions.map((q) => ({ id: q.id, number: q.number, subPart: q.subPart, text: q.text })));
-  const answersJson = JSON.stringify(answerBlocks.map((a) => ({ id: a.id, detectedLabel: a.detectedLabel, text: a.text })));
+  const questionsJson = JSON.stringify(
+    questions.map((q) => ({
+      id: q.id,
+      number: q.number,
+      subPart: q.subPart,
+      text: q.text,
+    }))
+  );
+  const answersJson = JSON.stringify(
+    answerBlocks.map((a) => ({
+      id: a.id,
+      detectedLabel: a.detectedLabel,
+      text: a.text,
+    }))
+  );
 
   const prompt = `You are an answer-to-question mapper and careful exam evaluator. Match each answer to the correct question, then evaluate whether the answer is correct based only on the question and the student's transcribed answer.
 
@@ -245,8 +256,7 @@ Rules:
 - Return ONLY the JSON array, nothing else`;
 
   const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
+  const text = result.response.text();
 
   let cleaned = text.trim();
   if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7);
@@ -287,33 +297,74 @@ Rules:
   }
 }
 
+const ALLOWED_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+]);
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export async function POST(request: NextRequest) {
   let stage = "request validation";
   try {
-    const { sessionId } = await request.json();
-
-    if (!sessionId) {
-      return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
-    }
-
-    const session = sessions.get(sessionId);
-    if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
-
-    session.status = "processing";
-
     if (!process.env.GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY is not configured" },
+        { status: 500 }
+      );
+    }
+
+    // Accept files directly via multipart form data
+    const formData = await request.formData();
+
+    const questionPaperFiles: File[] = [];
+    const answerSheetFiles: File[] = [];
+
+    for (const [key, value] of formData.entries()) {
+      if (!(value instanceof File)) continue;
+      if (key === "questionPaper") questionPaperFiles.push(value);
+      else if (key === "answerSheet") answerSheetFiles.push(value);
+    }
+
+    if (questionPaperFiles.length === 0) {
+      return NextResponse.json(
+        { error: "No question paper files provided" },
+        { status: 400 }
+      );
+    }
+    if (answerSheetFiles.length === 0) {
+      return NextResponse.json(
+        { error: "No answer sheet files provided" },
+        { status: 400 }
+      );
+    }
+
+    for (const file of [...questionPaperFiles, ...answerSheetFiles]) {
+      if (!ALLOWED_TYPES.has(file.type)) {
+        return NextResponse.json(
+          {
+            error: `Invalid file type: ${file.type}. Allowed: PDF, PNG, JPG, GIF, BMP, TIFF`,
+          },
+          { status: 400 }
+        );
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: `File ${file.name} exceeds 10 MB limit` },
+          { status: 400 }
+        );
+      }
     }
 
     stage = "converting question paper pages";
-    const questionPaperImages = await filesToAnalysisImages(session.questionPaperFiles);
+    const questionPaperImages = await filesToAnalysisImages(questionPaperFiles);
+
     stage = "converting answer sheet pages";
-    const answerSheetImages = await filesToAnalysisImages(session.answerSheetFiles);
+    const answerSheetImages = await filesToAnalysisImages(answerSheetFiles);
 
     stage = "extracting questions";
     console.log("Extracting questions...");
@@ -332,14 +383,14 @@ export async function POST(request: NextRequest) {
       .filter((b) => !matchedAnswerIds.has(b.id))
       .map((b) => ({ answerBlockId: b.id, reason: "No matching question found" }));
 
-    // Send files as base64 data URLs for client-side rendering
-    const questionPaperImageUrls = questionPaperImages.map((image) => `data:${image.mimeType};base64,${image.data}`);
-    const answerSheetImageUrls = answerSheetImages.map((image) => `data:${image.mimeType};base64,${image.data}`);
-
-    session.status = "completed";
+    const questionPaperImageUrls = questionPaperImages.map(
+      (img) => `data:${img.mimeType};base64,${img.data}`
+    );
+    const answerSheetImageUrls = answerSheetImages.map(
+      (img) => `data:${img.mimeType};base64,${img.data}`
+    );
 
     return NextResponse.json({
-      sessionId,
       status: "completed",
       questionPaperImages: questionPaperImageUrls,
       answerSheetImages: answerSheetImageUrls,
@@ -351,9 +402,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Processing error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: `Failed during ${stage}: ${message}` }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json(
+      { error: `Failed during ${stage}: ${message}` },
+      { status: 500 }
+    );
   }
 }

@@ -37,29 +37,17 @@ export default function Home() {
     setError(null);
 
     try {
-      // Step 1: Upload files
+      // Single request: send files directly to /api/process
       const formData = new FormData();
       questionPaper.forEach((file) => formData.append("questionPaper", file));
       answerSheet.forEach((file) => formData.append("answerSheet", file));
 
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!uploadResponse.ok) {
-        throw await readApiError(uploadResponse, "Failed to upload files");
-      }
-
-      const { sessionId } = await uploadResponse.json();
       setProcessingStage("extracting_questions");
       setProgress(30);
 
-      // Step 2: Process documents
       const processResponse = await fetch("/api/process", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: formData,
       });
 
       if (!processResponse.ok) {
@@ -77,7 +65,7 @@ export default function Home() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to connect to the processing server.";
       console.error("Processing failed:", err);
-      setError(message === "Failed to fetch" ? "Unable to connect to the server. Start the Next.js development server and try again." : message);
+      setError(message === "Failed to fetch" ? "Unable to connect to the server. Please try again." : message);
       setScreen("upload");
     }
   }, []);
