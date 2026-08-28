@@ -1,10 +1,13 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "@napi-rs/canvas";
 
-// Disable the web worker entirely for server-side usage.
-// pdfjs-dist runs the parser in-process when workerSrc is not set and
-// disableWorker is passed to getDocument — no browser worker is needed.
-pdfjsLib.GlobalWorkerOptions.workerSrc = "ignore";
+// In Node.js there is no real Worker API, so pdfjs falls back to a "fake
+// worker" by doing:  await import(GlobalWorkerOptions.workerSrc)
+// The value must therefore be a resolvable module specifier (not a file URL,
+// not an empty string, not a random word).  Pointing it at the worker entry
+// that ships inside pdfjs-dist lets Node.js resolve it from node_modules.
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 export async function pdfFileToImages(
   file: File,
@@ -12,7 +15,9 @@ export async function pdfFileToImages(
 ): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
-  const pdf = await pdfjsLib.getDocument({ data: uint8Array, disableWorker: true } as Parameters<typeof pdfjsLib.getDocument>[0]).promise;
+  const pdf = await pdfjsLib
+    .getDocument({ data: uint8Array })
+    .promise;
   const images: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -41,7 +46,7 @@ export async function pdfFileToImages(
 
     await page.render(renderContext).promise;
 
-    // @napi-rs/canvas returns a Buffer from toBuffer(); convert to base64 data URL
+    // @napi-rs/canvas — encode to JPEG and return as base64 data URL
     const buffer = await canvas.encode("jpeg", 85);
     images.push(`data:image/jpeg;base64,${buffer.toString("base64")}`);
   }
