@@ -1,12 +1,11 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createCanvas } from "canvas";
-import { pathToFileURL } from "node:url";
-import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(
-  require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")
-).href;
+// In a server-side (Node.js) environment the PDF parser runs in-process —
+// there is no web worker. Setting workerSrc to an empty string disables the
+// browser-oriented worker lookup and avoids bundlers (Turbopack/webpack)
+// resolving the worker module path to a numeric ID, which crashes pathToFileURL.
+pdfjsLib.GlobalWorkerOptions.workerSrc = "";
 
 export async function pdfFileToImages(
   file: File,
