@@ -25,9 +25,8 @@ export function Header({ title = "Exams", showBack = true, onBack, onMenuToggle 
         )}
         {/* Mobile: Logo */}
         <div className="flex items-center gap-2 lg:hidden">
-          <div className="w-8 h-8 bg-[#1a1a1a] rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden">
-            <Image src="/logo.png" alt="VedaAI" width={20} height={20} className="object-contain" />
-          </div>
+                      <Image src="/logo.png" alt="VedaAI" width={30} height={30} className="object-contain" />
+
           <span className="font-bold text-[17px] text-gray-900">VedaAI</span>
         </div>
         {/* Desktop: Breadcrumb */}

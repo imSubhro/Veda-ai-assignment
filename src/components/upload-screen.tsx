@@ -28,15 +28,15 @@ function UploadZone({ titleHighlight, onDrop, files, onRemove }: UploadZoneProps
     <div
       {...getRootProps()}
       className={cn(
-        "border border-dashed border-gray-200 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200",
-        "hover:border-orange-300 hover:bg-orange-50/20",
-        isDragActive && "border-orange-400 bg-orange-50",
-        files.length > 0 && "border-gray-200 bg-gray-50/30"
+        "border border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200",
+        "hover:border-[#ff5722]/50 hover:bg-[#ff5722]/5",
+        isDragActive && "border-[#ff5722] bg-[#ff5722]/5",
+        files.length > 0 && "bg-gray-50/50"
       )}
     >
       <input {...getInputProps()} />
       {files.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-6">
+        <div className="flex flex-col items-center gap-3 py-4">
           <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
             <Upload className="w-5 h-5 text-gray-400" strokeWidth={2} />
           </div>
@@ -68,9 +68,9 @@ function UploadZone({ titleHighlight, onDrop, files, onRemove }: UploadZoneProps
                   e.stopPropagation();
                   onRemove(index);
                 }}
-                className="w-7 h-7 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                className="w-7 h-7 bg-gray-800 hover:bg-gray-900 rounded-full flex items-center justify-center shrink-0 transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-gray-500" />
+                <X className="w-3.5 h-3.5 text-white" />
               </button>
             </div>
           ))}
@@ -113,29 +113,24 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
   const isReady = questionPaperFiles.length > 0 && answerSheetFiles.length > 0;
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-6 lg:p-10">
-      <div className="w-full max-w-[750px] space-y-5 lg:space-y-6">
+    <div className="min-h-[calc(100vh-60px)] flex items-center justify-center p-5 lg:p-10">
+      <div className="w-full max-w-[700px] space-y-5 lg:space-y-6">
         {/* Title */}
-        <div className="space-y-1 text-center lg:text-left">
-          <h1 className="text-[26px] sm:text-[32px] lg:text-[40px] font-bold text-gray-900 leading-tight whitespace-nowrap">
+        <div className="space-y-1 text-center">
+          <h1 className="text-[26px] sm:text-[32px] lg:text-[40px] font-bold text-gray-900 leading-tight">
             Upload{" "}
             <span className="relative inline-block">
               <span className="relative z-10 text-[#ff5722]">Question Paper & Answer Sheets</span>
               <span className="absolute inset-0 bg-[#ff5722]/8 rounded-md" />
             </span>
           </h1>
-          <p className="text-[14px] lg:text-[15px] text-gray-500 text-center">Upload both files to get started</p>
+          <p className="text-[14px] lg:text-[15px] text-gray-500">Upload both files to get started</p>
         </div>
 
         {/* Model Image */}
         <div className="flex justify-center">
-          <div className="relative w-[120px] h-[120px]">
-            {/* Outer ring */}
-            <div className="absolute inset-0 rounded-full border-[1.5px] border-[#ff5722]/20" />
-            {/* Middle ring */}
-            <div className="absolute inset-3 rounded-full border border-[#ff5722]/15" />
-            {/* Inner circle with image */}
-            <div className="absolute inset-5 rounded-full overflow-hidden bg-[#ffecd2]">
+          <div className="relative w-[110px] h-[110px] lg:w-[130px] lg:h-[130px]">
+            <div className="w-full h-full rounded-full overflow-hidden bg-[#ffecd2]">
               <Image
                 src="/model.png"
                 alt="AI Assistant"
@@ -143,21 +138,11 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
                 className="object-cover"
               />
             </div>
-            {/* Floating icons */}
-            <div className="absolute -top-0.5 right-2 w-5 h-5 bg-[#ff5722] rounded-full flex items-center justify-center shadow-sm">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 10 10-12h-9l1-10z"/></svg>
-            </div>
-            <div className="absolute top-1/2 -left-2 w-5 h-5 bg-[#ff5722] rounded-full flex items-center justify-center shadow-sm">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <div className="absolute bottom-1 left-1/4 w-4 h-4 bg-[#ff8a65] rounded-full flex items-center justify-center shadow-sm">
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M5 13l4 4L19 7"/></svg>
-            </div>
           </div>
         </div>
 
         {/* Upload Zones Container */}
-        <div className="border border-dashed border-gray-200 rounded-2xl p-3 bg-white/50">
+        <div className="border border-dashed border-gray-300 rounded-2xl p-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <UploadZone
               titleHighlight="Question Paper"
@@ -175,11 +160,11 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
         </div>
 
         {/* Start Button */}
-        <div className="flex flex-col items-center gap-3 pt-2">
+        <div className="flex flex-col items-center gap-3 pt-1">
           <Button
             size="lg"
             className={cn(
-              "px-8 py-5 h-12 text-[15px] font-semibold rounded-full transition-all",
+              "px-8 h-12 text-[15px] font-semibold rounded-full transition-all",
               isReady
                 ? "bg-gray-900 hover:bg-gray-800 text-white"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -190,7 +175,7 @@ export function UploadScreen({ onFilesReady }: UploadScreenProps) {
             Start Mapping
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
-          <p className="text-[13px] text-gray-400">
+          <p className="text-[13px] text-gray-400 text-center">
             Once both files are uploaded, you&apos;ll able to map answers with questions
           </p>
         </div>

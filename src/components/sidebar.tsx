@@ -1,8 +1,8 @@
 "use client";
 
-import { 
-  BookOpen, ClipboardList, FileText, Library, 
-  Sparkles, LayoutGrid, ChevronRight
+import {
+  BookOpen, ClipboardList, FileText, Library,
+  Settings, Sparkles, LayoutGrid, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -31,9 +31,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between p-4 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-[#1a1a1a] rounded-[10px] flex items-center justify-center shrink-0">
-            <Image src="/logo.png" alt="VedaAI" width={22} height={22} className="object-contain" />
-          </div>
+                      <Image src="/logo.png" alt="VedaAI" width={30} height={30} className="object-contain" />
+
           {!collapsed && (
             <span className="text-[18px] font-bold tracking-tight text-gray-900">VedaAI</span>
           )}
@@ -84,6 +83,19 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           </button>
         ))}
       </nav>
+
+      {/* Settings */}
+      <div className="px-3 py-2">
+        <button
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[14px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors",
+            collapsed && "justify-center px-2"
+          )}
+        >
+          <Settings size={18} strokeWidth={1.8} />
+          {!collapsed && <span>Settings</span>}
+        </button>
+      </div>
 
       {/* School Info */}
       <div className={cn("p-3", collapsed && "px-2")}>

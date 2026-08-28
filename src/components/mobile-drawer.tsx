@@ -1,8 +1,8 @@
 "use client";
 
-import { 
-  BookOpen, ClipboardList, FileText, Library, 
-  X, Sparkles, LayoutGrid
+import {
+  BookOpen, ClipboardList, FileText, Library,
+  Settings, X, Sparkles, LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -42,9 +42,8 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-[#1a1a1a] rounded-[10px] flex items-center justify-center shrink-0">
-              <Image src="/logo.png" alt="VedaAI" width={22} height={22} className="object-contain" />
-            </div>
+                          <Image src="/logo.png" alt="VedaAI" width={22} height={22} className="object-contain" />
+
             <span className="text-[18px] font-bold tracking-tight text-gray-900">VedaAI</span>
           </div>
           <button
@@ -80,6 +79,14 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             </button>
           ))}
         </nav>
+
+        {/* Settings */}
+        <div className="px-3 py-2">
+          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[14px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+            <Settings size={18} strokeWidth={1.8} />
+            <span>Settings</span>
+          </button>
+        </div>
 
         {/* School Info */}
         <div className="p-3">
